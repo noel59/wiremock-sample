@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>ie.aib</groupId>
+    <artifactId>wiremock-sample</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>io.fabric8</groupId>
+                <artifactId>docker-maven-plugin</artifactId>
+                <version>0.21.0</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <images>
+                        <image>
+                            <alias>aib-wiremock</alias>
+                            <name>test/wiremock:${project.version}</name>
+
+                            <build>
+                                <cleanup>true</cleanup>
+                                <from>rodolpheche/wiremock:latest</from>
+
+                                <assembly>
+                                    <mode>dir</mode>
+                                    <targetDir>/home/wiremock/</targetDir>
+                                    <inline>
+                                        <fileSets>
+                                            <fileSet>
+                                                <directory>stubs/__files</directory>
+                                                <outputDirectory>__files</outputDirectory>
+                                                <includes>
+                                                    <include>*</include>
+                                                </includes>
+                                            </fileSet>
+                                            <fileSet>
+                                                <directory>stubs/mappings</directory>
+                                                <outputDirectory>mappings</outputDirectory>
+                                                <includes>
+                                                    <include>*</include>
+                                                </includes>
+                                            </fileSet>
+                                        </fileSets>
+                                    </inline>
+                                </assembly>
+                            </build>
+
+                            <run>
+                                <namingStrategy>none</namingStrategy>
+                                <ports>
+                                    <port>8080:8080</port>
+                                </ports>
+                                <wait>
+                                    <!-- The plugin waits until this URL is reachable via HTTP ... -->
+                                    <http>
+                                        <url>http://localhost:8080/random</url>
+                                        <method>GET</method>
+                                        <status>200</status>
+                                    </http>
+                                    <!-- ... but at max 10 seconds -->
+                                    <time>120000</time>
+                                </wait>
+                                <log>
+                                    <enabled>true</enabled>
+                                    <color>red</color>
+                                </log>
+                                <env>
+                                    <SPRING_DATASOURCE_USERNAME>cool-username</SPRING_DATASOURCE_USERNAME>
+                                    <SPRING_DATASOURCE_PASSWORD>secret</SPRING_DATASOURCE_PASSWORD>
+                                </env>
+                            </run>
+                        </image>
+                        <image>
+                            <alias>aib-busybox</alias>
+                            <name>busybox:latest</name>
+                        </image>
+
+                        <image>
+                            <alias>docker-compose-test</alias>
+                            <name>test/compose-demo:latest</name>
+
+                            <external>
+                                <type>compose</type>
+                                <basedir>src/main/resources</basedir>
+                                <composeFile>docker-compose.yml</composeFile>
+                            </external>
+                        </image>
+                    </images>
+                </configuration>
+
+                <!-- Connect start/stop to pre- and
+                     post-integration-test phase, respectively if you want to start
+                     your docker containers during integration tests -->
+                <executions>
+                    <execution>
+                        <id>start</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <!-- "build" should be used to create the images with the
+                                 artifact -->
+                            <goal>build</goal>
+                            <goal>start</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>stop</id>
+                        <phase>post-integration-test</phase>
+                        <goals>
+                            <goal>stop</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>2.20</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+    <dependencies>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.sun.jersey</groupId>
+            <artifactId>jersey-client</artifactId>
+            <version>1.19.4</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>4.5.3</version>
+        </dependency>
+    </dependencies>
+</project>
